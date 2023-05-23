@@ -150,7 +150,6 @@ func _on_Materials_pressed():
 		texture.connect("mouse_exited", self, "on_mouse_out")
 		texture.connect("pressed", self, "show_buy_sell", ["Materials", mat.name])
 	$Control/VBox/BuySell.visible = true
-
 func _on_Metals_pressed():
 	set_process(not game.autocollect.mets.empty())
 	tab = "metals"
@@ -168,7 +167,39 @@ func _on_Metals_pressed():
 		texture.connect("mouse_exited", self, "on_mouse_out")
 		texture.connect("pressed", self, "show_buy_sell", ["Metals", met.name])
 	$Control/VBox/BuySell.visible = true
-
+func _on_Compounds_pressed():
+	set_process(not game.autocollect.compounds.empty())
+	tab = "compounds"
+	info.text = tr("INV_COMPOUNDS_DESC")
+	inventory_grid.visible = false
+	grid.visible = true
+	particles_hbox.visible = false
+	hbox_data = Helper.put_rsrc(grid, 48, game.compounds)
+	for compounds in hbox_data:
+		if not game.show.has(compounds.name):
+			compounds.rsrc.visible = false
+			continue
+		var texture = compounds.rsrc.get_node("Texture")
+		texture.connect("mouse_entered", self, "show_compounds", [compounds.name])
+		texture.connect("mouse_exited", self, "on_mouse_out")
+		texture.connect("pressed", self, "show_buy_sell", ["Compounds", compounds.name])
+	$Control/VBox/BuySell.visible = true
+func _on_Quarks_pressed():
+	set_process(not game.autocollect.quarks.empty())
+	tab = "quarks"
+	info.text = tr("INV_QUARKS_DESC")
+	inventory_grid.visible = false
+	grid.visible = true
+	particles_hbox.visible = false
+	hbox_data = Helper.put_rsrc(grid, 48, game.quarks)
+	for quarks in hbox_data:
+		if not game.show.has(quarks.name):
+			quarks.rsrc.visible = false
+			continue
+		var texture = quarks.rsrc.get_node("Texture")
+		texture.connect("mouse_entered", self, "show_quarks", [quarks.name])
+		texture.connect("mouse_exited", self, "on_mouse_out")
+	$Control/VBox/BuySell.visible = true
 func _on_Atoms_pressed():
 	set_process(not game.autocollect.atoms.empty())
 	tab = "atoms"

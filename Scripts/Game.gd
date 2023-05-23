@@ -1,9 +1,9 @@
 extends Node2D
 
 const TEST:bool = false
-const DATE:String = "26 Feb 2023"
-const VERSION:String = "v0.26.3"
-const COMPATIBLE_SAVES = ["v0.25", "v0.25.1", "v0.25.2", "v0.25.3", "v0.25.4", "v0.26", "v0.26.1", "v0.26.2", "v0.26.3"]
+const DATE:String = "22 may 2023"
+const VERSION:String = "v0.26.4UNOFFICAL"
+const COMPATIBLE_SAVES = ["v0.26.3UNOFFICAL", "v0.26.4UNOFFICAL"]
 const SYS_NUM:int = 400
 const UNIQUE_BLDGS = 7
 
@@ -40,9 +40,7 @@ var planet_textures:Array
 var galaxy_textures:Array
 var bldg_textures:Dictionary
 var default_font:Font
-
 var tutorial:Node2D
-
 var construct_panel:Control
 var megastructures_panel:Control
 var gigastructures_panel:Control
@@ -101,6 +99,8 @@ var active_panel
 #The base node containing things that can be moved/zoomed in/out
 var view
 var show_atoms:Array = []#For element overlay
+var show_compounds:Array = []
+var show_quarks:Array = []
 
 ############ Save data ############
 
@@ -148,12 +148,13 @@ var auto_replace:bool
 
 #Stores information of the current pickaxe the player is holding
 var pickaxe:Dictionary
-
+#registeres matter type
 var mats:Dictionary
 var mets:Dictionary
 var atoms:Dictionary
 var particles:Dictionary
-
+var compounds:Dictionary
+var quarks:Dictionary
 #Stores production values boosted by an aurora (useful to recalculate resource production after buying AIE upgrade)
 var aurora_prod:Dictionary = {}
 
@@ -260,47 +261,60 @@ var MM_data = {
 var mat_info = {	"coal":{"value":15},#One kg of coal = $15
 					"glass":{"value":1000},
 					"sand":{"value":8},
-					#"clay":{"value":12},
+					"clay":{"value":12},
 					"quillite":{"value":2000000},
 					"soil":{"value":14},
 					"cellulose":{"value":70},
 					"silicon":{"value":80},
+					"ceramic":{"value":400},
+					"polyethylene":{"value":3000},
+					"polyvinylchloride":{"value":12000},
+					"salt":{"value":50},
+					"steel":{"value":2500},
+					"refinedlead":{"value":500},
+					"refinedcopper":{"value":2000},
+					"refinediron":{"value":1000},
+					"refinedaluminium":{"value":20000},
+					"refinedsilver":{"value":40000},
+					"refinedgold":{"value":120000},
 }
 #Changing length of met_info changes cave rng!
-var met_info = {	"lead":{"min_depth":0, "max_depth":500, "rarity":1, "density":11.34, "value":300},
-					"copper":{"min_depth":100, "max_depth":750, "rarity":1.7, "density":8.96, "value":660},
-					"iron":{"min_depth":200, "max_depth":1000, "rarity":2.8, "density":7.87, "value":1400},
-					"aluminium":{"min_depth":300, "max_depth":1500, "rarity":5.0, "density":2.7, "value":3350},
-					"silver":{"min_depth":400, "max_depth":1750, "rarity":8.5, "density":10.49, "value":7430},
-					"gold":{"min_depth":600, "max_depth":2500, "rarity":15.3, "density":19.3, "value":17950},
-					"amethyst":{"min_depth":800, "max_depth":3000, "rarity":25.5, "density":2.66, "value":38630},
-					"emerald":{"min_depth":800, "max_depth":3000, "rarity":25.6, "density":2.70, "value":38850},
-					"quartz":{"min_depth":800, "max_depth":3000, "rarity":25.7, "density":2.32, "value":39080},
-					"topaz":{"min_depth":800, "max_depth":3000, "rarity":25.8, "density":3.50, "value":39310},
-					"ruby":{"min_depth":800, "max_depth":3000, "rarity":25.9, "density":4.01, "value":39540},
-					"sapphire":{"min_depth":800, "max_depth":3000, "rarity":26.0, "density":3.99, "value":39770},
-					"titanium":{"min_depth":1500, "max_depth":4000, "rarity":46.0, "density":4.51, "value":93590},
-					"platinum":{"min_depth":2400, "max_depth":6000, "rarity":79.5, "density":21.45, "value":212650},
-					"diamond":{"min_depth":5800, "max_depth":9000, "rarity":157.3, "density":4.20, "value":591850},
-					"nanocrystal":{"min_depth":9400, "max_depth":14000, "rarity":298.9, "density":1.5, "value":1550270},
-					"mythril":{"min_depth":23000, "max_depth":28000, "rarity":1586.4, "density":13.4, "value":18955720},
+var met_info = {	"lead":{"min_depth":0, "max_depth":500, "rarity":1, "density":40.5, "value":100},
+					"copper":{"min_depth":100, "max_depth":750, "rarity":1.7, "density":20.4, "value":340},
+					"iron":{"min_depth":200, "max_depth":1000, "rarity":2.8, "density":18.6, "value":210},
+					"aluminium":{"min_depth":300, "max_depth":1500, "rarity":5.0, "density":6.4, "value":432},
+					"silver":{"min_depth":400, "max_depth":1750, "rarity":10.4, "density":26.4, "value":12000},
+					"gold":{"min_depth":600, "max_depth":2500, "rarity":20.5, "density":32.8, "value":36000},
+					"amethyst":{"min_depth":800, "max_depth":3000, "rarity":25.5, "density":5.6, "value":38630},
+					"emerald":{"min_depth":800, "max_depth":3000, "rarity":25.6, "density":5.6, "value":38850},
+					"quartz":{"min_depth":800, "max_depth":3000, "rarity":25.7, "density":5.6, "value":39080},
+					"topaz":{"min_depth":800, "max_depth":3000, "rarity":25.8, "density":5.6, "value":39310},
+					"ruby":{"min_depth":800, "max_depth":3000, "rarity":25.9, "density":5.6, "value":39540},
+					"sapphire":{"min_depth":800, "max_depth":3000, "rarity":26.0, "density":5.6, "value":39770},
+					"titanium":{"min_depth":1500, "max_depth":4000, "rarity":46.0, "density":10.4, "value":64054},
+					"platinum":{"min_depth":2400, "max_depth":6000, "rarity":79.5, "density":32.4, "value":80105},
+					"diamond":{"min_depth":5800, "max_depth":9000, "rarity":157.3, "density":3.4, "value":91850},
+					"nanocrystal":{"min_depth":9400, "max_depth":14000, "rarity":298.9, "density":8.4, "value":155027},
+					"mythril":{"min_depth":23000, "max_depth":28000, "rarity":794.4, "density":50.7, "value":189557},
+					"naquadah":{"min_depth":250000, "max_depth":350000, "rarity":3964.6, "density":92.4, "value":599679},
+					"enrichednaquadah":{"min_depth":250000, "max_depth":350000, "rarity":8192.6, "density":94.8, "value":2058494},
+					"naquadria":{"min_depth":250000, "max_depth":400000, "rarity":16384.4, "density":90.4, "value":5943049},
+					"trinium":{"min_depth":1000000, "max_depth":2500000, "rarity":65536.8, "density":122.6, "value":40459695},
+					"tritanium":{"min_depth":2500000, "max_depth":5000000, "rarity":262144.4, "density":149.5, "value":950405950},
 }
 
 var pickaxes_info = {"stick":{"speed":1.0, "durability":140, "costs":{"money":300}},
-					"wooden_pickaxe":{"speed":1.8, "durability":300, "costs":{"money":2700}},
-					"stone_pickaxe":{"speed":3.0, "durability":500, "costs":{"money":24000}},
-					"lead_pickaxe":{"speed":4.9, "durability":600, "costs":{"money":115000}},
-					"copper_pickaxe":{"speed":7.4, "durability":600, "costs":{"money":580000}},
-					"iron_pickaxe":{"speed":11.2, "durability":900, "costs":{"money":4350000}},
-					"aluminium_pickaxe":{"speed":17.8, "durability":800, "costs":{"money":20500000}},
-					"silver_pickaxe":{"speed":28.7, "durability":1000, "costs":{"money":e(8, 7)}},
-					"gold_pickaxe":{"speed":190.0, "durability":150, "costs":{"money":e(6.25, 8)}},
-					"gemstone_pickaxe":{"speed":85.0, "durability":1200, "costs":{"money":e(9.5, 8)}},
-					"titanium_pickaxe":{"speed":175.0, "durability":2500, "costs":{"money":e(8.2, 9)}},
-					"platinum_pickaxe":{"speed":330.0, "durability":1300, "costs":{"money":e(1.15, 10)}},
-					"diamond_pickaxe":{"speed":775.0, "durability":2000, "costs":{"money":e(5.4, 10)}},
-					"nanocrystal_pickaxe":{"speed":4980.0, "durability":770, "costs":{"money":e(3.25, 11)}},
-					"mythril_pickaxe":{"speed":19600.0, "durability":4000, "costs":{"money":e(6.4, 12)}},
+					"wooden_pickaxe":{"speed":1.8, "durability":300, "costs":{"cellulose":100, "money":500}},
+					"stone_pickaxe":{"speed":3.0, "durability":500, "costs":{"money":2000, "cellulose":50, "stone":20000}},
+					"ceramic_pickaxe":{"speed":4.6, "durability":625, "costs":{"money":5000, "cellulose":100, "ceramic":500}},
+					"copper_pickaxe":{"speed":7.4, "durability":750, "costs":{"money":10000, "refinedcopper":100, "cellulose":200}},
+					"iron_pickaxe":{"speed":11.4, "durability":1000, "costs":{"money":200000, "refinediron":100, "cellulose":500}},
+					"steel_pickaxe":{"speed":26.5, "durability":1500, "costs":{"money":1000000, "steel":250, "polyethylene":500}},
+					"titanium_pickaxe":{"speed":56.7, "durability":2250, "costs":{"money":7500000, "steel":1000, "titanium":1250, "polyethylene":250, "polyvinvlchloride":50}},
+					"quillite_pickaxe":{"speed":113.2, "durability":1750, "costs":{"money":22500000, "steel":1000, "titanium":500, "quillite":1500, "polyethylene":375, "polyvinvlchloride":75}},
+					"naquadah_pickaxe":{"speed":266.4, "durability":1400, "costs":{"money":56000000, "naquadah":50, "naquadria":5, "quillite":1500, "polyethylene":500, "polyvinvlchloride":100}},
+					"trinalloy_pickaxe":{"speed":1034.5, "durability":2500, "costs":{"money":256000000, "naquadria":1000, "trinium":500, "tritanium":1000, "trinalloy":1500, "polyethylene":375, "polyvinvlchloride":75}},
+					"trinnaquatrimythalloy_pickaxe":{"speed":8192.7, "durability":5500, "costs":{"money":1280000000, "naquadria":2500, "trinium":500, "tritanium":1000, "trinalloy":1500, "trinnaquatrimythalloy":5000, "mythril":51200, "polyethylene":375, "polyvinvlchloride":75}},
 }
 
 var speedups_info = {	"speedup1":{"costs":{"money":400}, "time":2*60000, "name":"X_MINUTE_SPEEDUP", "name_param":2},
@@ -309,6 +323,9 @@ var speedups_info = {	"speedup1":{"costs":{"money":400}, "time":2*60000, "name":
 						"speedup4":{"costs":{"money":65000}, "time":6*60*60000, "name":"X_HOUR_SPEEDUP", "name_param":6},
 						"speedup5":{"costs":{"money":255000}, "time":24*60*60000, "name":"X_HOUR_SPEEDUP", "name_param":24},
 						"speedup6":{"costs":{"money":1750000}, "time":7*24*60*60000, "name":"X_DAY_SPEEDUP", "name_param":7},
+						"speedup7":{"costs":{"money":10000000, "diamond":500}, "time":4*30*24*60*60000, "name":"X_DAY_SPEEDUP", "name_param":120},
+						"speedup8":{"costs":{"money":80000000, "diamond":2500, "nanocrystal":500}, "time":2*12*30*24*60*60000, "name":"X_DAY_SPEEDUP", "name_param":720},
+						"speedup9":{"costs":{"money":1000000000, "diamond":12500, "nanocrystal":2500, "quillite":10000, "naquadh":500}, "time":1*10*10*12*30*24*60*60000, "name":"X_DAY_SPEEDUP", "name_param":36000},
 }
 
 var overclocks_info = {	"overclock1":{"costs":{"money":2800}, "mult":1.5, "duration":10*60000},
@@ -317,6 +334,9 @@ var overclocks_info = {	"overclock1":{"costs":{"money":2800}, "mult":1.5, "durat
 						"overclock4":{"costs":{"money":340000}, "mult":3, "duration":2*60*60000},
 						"overclock5":{"costs":{"money":2200000}, "mult":4, "duration":6*60*60000},
 						"overclock6":{"costs":{"money":18000000}, "mult":5, "duration":24*60*60000},
+						"overclock7":{"costs":{"money":600000000, "diamond":1000}, "mult":7, "duration":7*24*60*60000},
+						"overclock8":{"costs":{"money":3000000000, "diamond":5000, "nanocrystal":1000}, "mult":15, "duration":30*24*60*60000},
+						"overclock9":{"costs":{"money":50000000000, "diamond":50000, "nanocrystal":10000, "mythril":5000, "quillite":5000}, "mult":75, "duration":3*30*24*60*60000}
 }
 
 var seeds_produce = {"lead_seeds":{"costs":{"cellulose":0.05}, "produce":{"lead":0.1}},
@@ -326,8 +346,10 @@ var seeds_produce = {"lead_seeds":{"costs":{"cellulose":0.05}, "produce":{"lead"
 					"silver_seeds":{"costs":{"cellulose":0.09}, "produce":{"silver":0.1*met_info.lead.value / met_info.silver.value}},
 					"gold_seeds":{"costs":{"cellulose":0.1}, "produce":{"gold":0.1*met_info.lead.value / met_info.gold.value}},
 }
-var craft_mining_info = {	"mining_liquid":{"costs":{"coal":200, "glass":20}, "speed_mult":1.5, "durability":400},
-							"purple_mining_liquid":{"costs":{"H":4000, "O":2000, "glass":500}, "speed_mult":4.0, "durability":800},
+var craft_mining_info = {	"miningliquidred":{"costs":{"coal":200, "glass":20}, "speed_mult":1.5, "durability":400},
+							"miningliquidgreen":{"costs":{"glass":50,"refinedcopper":50}, "speed_mult":2.2, "durability":800},
+							"miningliquidblue":{"costs":{"glass":225,"refinedaluminium":100}, "speed_mult":3.8, "durability":800},
+							"miningliquidpurple":{"costs":{"sulfuricacid":500, "refinedsilver":200, "polyethylene":500}, "speed_mult":7.2, "durability":800},
 }
 
 var craft_cave_info = {
@@ -344,6 +366,7 @@ var other_items_info = {
 	"hx_core2":{"XP":800},
 	"hx_core3":{"XP":120000},
 	"hx_core4":{"XP":1.6e7},
+	"hx_core5":{"XP":8e10},
 	"ship_locator":{}}
 
 var item_groups = [	{"dict":speedups_info, "path":"Items/Speedups"},
@@ -927,7 +950,8 @@ func new_game(tut:bool, univ:int = 0, new_save:bool = false):
 					"biology":{"DRs":0, "lv":0},
 					"philosophy":{"DRs":0, "lv":0},
 					"engineering":{"DRs":0, "lv":0},
-					"dimensional_power":{"DRs":0, "lv":0}}
+					"dimensional_power":{"DRs":0, "lv":0},
+					"automation":{"DRs":0, "lv":0}}
 	else:
 		universe_data[univ].generated = true
 	u_i = universe_data[univ]
@@ -985,12 +1009,26 @@ func new_game(tut:bool, univ:int = 0, new_save:bool = false):
 	for sc in Data.infinite_research_sciences:
 		infinite_research[sc] = 0
 	mats = {	"coal":0,
+				"steel":0,
 				"glass":0,
+				"salt":0,
 				"sand":0,
 				"soil":0,
 				"cellulose":0,
 				"silicon":0,
 				"quillite":0,
+				"clay":0,
+				"ceramic":0,
+				"polyethylene":0,
+				"polyvinvlchloride":0,
+				"refinedlead":0,
+				"refinedcopper":0,
+				"refinediron":0,
+				"refinedaluminium":0,
+				"refinedsilver":0,
+				"refinedgold":0,
+				"refinedtitanium":0,
+				"refinedplatinum":0
 	}
 
 	mets = {	"lead":0,
@@ -1010,17 +1048,28 @@ func new_game(tut:bool, univ:int = 0, new_save:bool = false):
 				"diamond":0,
 				"nanocrystal":0,
 				"mythril":0,
+				"naquadah":0,
+				"naquadria":0,
+				"trinium":0,
+				"tritanium":0,
+				"enrichednaquadah":0
 	}
 
 	atoms = {	"H":0,
 				"He":0,
+				"Be":0,
+				"B":0,
 				"C":0,
 				"N":0,
 				"O":0,
 				"F":0,
+				"S":0,
 				"Ne":0,
 				"Na":0,
+				"Mg":0,
+				"Ni":0,
 				"Al":0,
+				"Cl":0,
 				"Si":0,
 				"Ti":0,
 				"Fe":0,
@@ -1033,10 +1082,34 @@ func new_game(tut:bool, univ:int = 0, new_save:bool = false):
 	}
 
 	particles = {	"proton":0,
-					"neutron":0,
+					"photon":0,
+					"µron":0,
 					"electron":0,
+					"neutron":0,
+					"graviton":0,
+					"neutrino":0,
+					"infiniterino":0,
+					"-proton":0,
+					"-photon":0,
+					"-µron":0,
+					"-neutron":0,
+					"-graviton":0,
+					"-neutrino":0,
+					"-infiniterino":0,
+				}
+	quarks = {	"upquark":0,
+				"downquark":0,
 	}
-
+	compounds = {	"sulfuricacid":0,
+					"sulfurtrioxide":0,
+					"sulfurdioxide":0,
+					"water":0,
+					"hydrochloricacid":0,
+					"nitricacid":0,
+					"trinalloy":0,
+					"trinnaquatrimythalloy":0,
+					
+	}
 	#Display help when players see/do things for the first time. true: show help
 
 	MUs = {	"MV":1,
@@ -1120,6 +1193,8 @@ func new_game(tut:bool, univ:int = 0, new_save:bool = false):
 		"mets":{},
 		"atoms":{},
 		"particles":{"proton":0, "neutron":0, "electron":0},
+		"compounds":{"sulfuricacid":0, "hydrochloricacid":0, "sulfurtrioxide":0, "sulfurdioxide":0, "nitricacid":0, "water":0},
+		"quarks":{"upquark":0, "downquark":0},
 		"MS":{"minerals":0, "energy":0, "SP":0},
 		"GS":{"minerals":0, "energy":0, "SP":0},
 		"rsrc":{"minerals":0, "energy":0, "SP":0},
@@ -2435,10 +2510,13 @@ func generate_systems(id:int):
 			elif mass >= 1000 and mass < 10000:#R
 				star_size = range_lerp(mass, 1000, 10000, 60, 200)
 				temp = range_lerp(mass, 1000, 10000, 120000, 210000)
-			elif mass >= 10000:#Z
-				var pw = pow(mass, 1/3.0) / pow(10000, 1/3.0)
+			elif mass >= 10000 and mass < 1000000:#Z
+				star_size = range_lerp(mass, 1000, 10000, 60, 200)
+				temp = range_lerp(mass, 210000, 420000, 820000, 1000000)
+			elif mass >= 1000000:#Max
+				var pw = pow(mass, 1/3.0) / pow(1000000, 1/3.0)
 				star_size = pw * 200
-				temp = pw * 210000
+				temp = pw * 1000000
 			
 			var star_type = ""
 			if mass >= 0.08:
@@ -2637,7 +2715,7 @@ func generate_planets(id:int):#local id
 			p_i.name = "%s %s" % [tr("GAS_GIANT"), p_id]
 		else:
 			p_i["name"] = tr("PLANET") + " " + String(p_id)
-			p_i.crust_start_depth = Helper.rand_int(50, 450)
+			p_i.crust_start_depth = Helper.rand_int(25, 100)
 			p_i.mantle_start_depth = round(rand_range(0.005, 0.02) * p_i.size * 1000)
 		var list_of_element_probabilities = Data.elements.duplicate()
 		if u_i.cluster_data[c_c].rich_elements.has("C"):
@@ -3323,14 +3401,19 @@ func make_planet_composition(temp:float, depth:String, size:float, gas_giant:boo
 	for el in elements:
 		elements[el] /= S
 	return elements
-
+func add_mantle_materials(temp:float, mantle_comp:Dictionary):
+	var mantle_mat_info = {"mythril":{"chance":0.2, "amount":20}}
 func add_surface_materials(temp:float, crust_comp:Dictionary):#Amount in kg
 	#temp in K
 	var surface_mat_info = {	"coal":{"chance":exp(-0.001 * pow(temp - 273, 2)), "amount":rand_range(50, 150)},
+								"salt":{"chance":exp(-0.001 * pow(temp - 273, 2)), "amount":rand_range(50, 150)},
 								"glass":{"chance":0.1, "amount":4},
+								"clay":{"chance":exp(-0.01 * pow(temp - 273, 2)), "amount":rand_range(25, 75)},
 								"sand":{"chance":0.8, "amount":50},
+								"polyethylene":{"chance":0.05, "amount":2},
+								"polyvinylchloride":{"chance":0.025, "amount":2},
 								"soil":{"chance":rand_range(0.1, 0.8), "amount":rand_range(30, 100)},
-								"cellulose":{"chance":exp(-0.001 * pow(temp - 273, 2)), "amount":rand_range(15, 45)}
+								"cellulose":{"chance":exp(-0.01 * pow(temp - 273, 2)), "amount":rand_range(15, 45)} 
 	}
 	if abs(temp - 273) > 80:
 		surface_mat_info.erase("cellulose")
@@ -3478,6 +3561,8 @@ func get_star_class (temp):
 		cl = "R" + String(floor(10 - (temp - 120000) / 90000 * 10))
 	elif temp < 1000000:
 		cl = "Z" + String(max(floor(10 - (temp - 210000) / 790000 * 10), 0))
+	elif temp < 10000000:
+		cl = "Max" + String(max(floor(10 - (temp-2100000) / 7900000 *10), 0))
 	return cl
 
 #Checks if player has enough resources to buy/craft/build something
@@ -3493,6 +3578,10 @@ func check_enough(costs):
 		if mets.has(cost) and mets[cost] < costs[cost]:
 			return false
 		if atoms.has(cost) and atoms[cost] < costs[cost]:
+			return false
+		if compounds.has(cost) and compounds[cost] < compounds[cost]:
+			return false
+		if quarks.has(cost) and quarks[cost] < quarks[cost]:
 			return false
 		if cost == "stone" and Helper.get_sum_of_dict(stone) < costs.stone:
 			return false
@@ -3516,6 +3605,10 @@ func deduct_resources(costs):
 			atoms[cost] = max(0, atoms[cost] - costs[cost])
 		if particles.has(cost):
 			particles[cost] = max(0, particles[cost] - costs[cost])
+		if compounds.has(cost):
+			compounds[cost] = max(0, compounds[cost] - costs[cost])
+		if quarks.has(cost):
+			quarks[cost] = max(0, quarks[cost] - costs[cost])
 
 func add_resources(costs):
 	for cost in costs:
@@ -3541,7 +3634,13 @@ func add_resources(costs):
 			atoms[cost] += costs[cost]
 		elif particles.has(cost):
 			show.particles = true
-			particles[cost] += costs[cost]
+			atoms[cost] += costs[cost]
+		elif compounds.has(cost):
+			show.compounds = true
+			compounds[cost] += costs[cost]
+		elif quarks.has(cost):
+			show.quarks = true
+			quarks[cost] += costs[cost]
 		if not show.has(cost):
 			show[cost] = true
 			if cost == "sand":
@@ -3776,6 +3875,12 @@ func _input(event):
 				else:
 					popup("No such metal", 1.5)
 					return
+			"setcompound":
+				if compounds.has(arr[1].to_lower()):
+					compounds[arr[1].to_lower()] = float(arr[2])
+				else:
+					popup("No such compounds", 1.5)
+					return
 			"setatom":
 				if atoms.has(arr[1].capitalize()):
 					atoms[arr[1].capitalize()] = float(arr[2])
@@ -3787,6 +3892,12 @@ func _input(event):
 					particles[arr[1].to_lower()] = float(arr[2])
 				else:
 					popup("No such particle", 1.5)
+					return
+			"setquark":
+				if quarks.has(arr[1].to_lower()):
+					quarks[arr[1].to_lower()] = float(arr[2])
+				else:
+					popup("No such quark", 1.5)
 					return
 			"fc":
 				if c_v == "planet":
@@ -3950,6 +4061,8 @@ func fn_save_game():
 		"mets":mets,
 		"atoms":atoms,
 		"particles":particles,
+		"quarks":quarks,
+		"compounds":compounds,
 		"show":show,
 		"new_bldgs":new_bldgs,
 		"items":items,
